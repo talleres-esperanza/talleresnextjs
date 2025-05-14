@@ -1,7 +1,7 @@
 const { gql, default: request } = require("graphql-request");
 
 const MASTER_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-
+const HYGRAPH_TOKEN = process.env.NEXT_PUBLIC_HYGRAPH_SECRET_TOKEN;
 const uploadAsset = async (file) => {
   try {
     // Paso 1: Crear el asset en Hygraph
@@ -75,9 +75,6 @@ const uploadAsset = async (file) => {
   }
 };
 
-
-
-
 const GetAprendices = async () => {
   const query = gql`
     query Clientes {
@@ -88,6 +85,7 @@ const GetAprendices = async () => {
           url
         }
         tieneValera
+        url2
       }
     }
   `;
@@ -109,6 +107,20 @@ const GetTipoClientes = async () => {
   return result;
 };
 
+const GetTipoProductos = async () => {
+  const query = gql`
+    query GetTipoProductos {
+      tipoProductos {
+        id
+        nombre
+        precio
+      }
+    }
+  `;
+  const result = await request(MASTER_URL, query);
+  return result;
+};
+
 const createClient = async (clientData) => {
   const mutation = gql`
     mutation CreateClient(
@@ -116,6 +128,7 @@ const createClient = async (clientData) => {
       $tipoClienteId: ID!
       $documento: String!
       $tieneValera: TieneValera!
+      $url2: String!
     ) {
       createCliente(
         data: {
@@ -123,6 +136,7 @@ const createClient = async (clientData) => {
           tipoCliente: { connect: { id: $tipoClienteId } }
           documento: $documento
           tieneValera: $tieneValera
+          url2: $url2
         }
       ) {
         id
@@ -143,6 +157,7 @@ const createClient = async (clientData) => {
     tipoClienteId: clientData.tipoClienteId,
     documento: clientData.documento.toString(),
     tieneValera: clientData.valera,
+    url2: clientData.url2,
   };
 
   // Crear el cliente
@@ -154,10 +169,53 @@ const createClient = async (clientData) => {
   return createCliente.id;
 };
 
+const createCombo = async (comboData) => {
+  const mutation = gql`
+    mutation CreateCombo($nombre: String!, $tipoComboId: ID!, $url2: String!) {
+      createProducto(
+        data: {
+          nombre: $nombre
+          tipoProducto: { connect: { id: $tipoComboId } }
+          url2: $url2
+        }
+      ) {
+        id
+      }
+    }
+  `;
+
+  const publishMutation = gql`
+    mutation PublishCombo($id: ID!) {
+      publishProducto(where: { id: $id }) {
+        id
+      }
+    }
+  `;
+
+  const variables = {
+    nombre: comboData.nombre,
+    tipoComboId: comboData.tipoComboId,
+    url2: comboData.url2,
+  };
+
+  // Crear el combo
+  const { createProducto } = await request(MASTER_URL, mutation, variables);
+
+  // Publicar el combo
+  await request(MASTER_URL, publishMutation, { id: createProducto.id });
+
+  return createProducto.id;
+};
+
 const GetPedidos = async (fecha) => {
-  const query = gql`
+  const query =
+    gql`
     query GetPedidos {
-      pedidos(where: { fecha: "`+fecha+`" }) {
+      pedidos(where: { fecha: "` +
+    fecha +
+    `" }
+      first: 1000
+  orderBy: createdAt_DESC) {
         id
         producto {
           id
@@ -165,6 +223,7 @@ const GetPedidos = async (fecha) => {
           imagen {
             url
           }
+          url2
         }
         aprendice {
           id
@@ -172,6 +231,7 @@ const GetPedidos = async (fecha) => {
           foto {
             url
           }
+          url2
         }
       }
     }
@@ -179,6 +239,53 @@ const GetPedidos = async (fecha) => {
   const result = await request(MASTER_URL, query);
   return result;
 };
+
+const updateClient = async (id, data) => {
+  const mutation = gql`
+    mutation UpdateCliente(
+      $id: ID!
+      $nombre: String!
+      $documento: String!
+      $valera: TieneValera!
+      $tipoClienteId: ID!
+      $url2: String!
+    ) {
+      updateCliente(
+        where: { id: $id }
+        data: {
+          nombre: $nombre
+          documento: $documento
+          tieneValera: $valera
+          tipoCliente: { connect: { id: $tipoClienteId } }
+          url2: $url2
+        }
+      ) {
+        id
+      }
+    }
+  `;
+
+  const publish = gql`
+    mutation PublishCliente($id: ID!) {
+      publishCliente(where: { id: $id }) {
+        id
+      }
+    }
+  `;
+
+  const variables = {
+    id,
+    nombre: data.nombre,
+    documento: data.documento,
+    valera: data.valera,
+    tipoClienteId: data.tipoClienteId,
+    url2: data.url2,
+  };
+
+  await request(MASTER_URL, mutation, variables);
+  await request(MASTER_URL, publish, { id });
+};
+
 
 const createPedido = async (pedidoData) => {
   // 1. Crear el pedido
@@ -230,11 +337,120 @@ const getProductos = async () => {
         tipoProducto {
           nombre
         }
+        url2
       }
     }
   `;
   const result = await request(MASTER_URL, query);
   return result;
+};
+
+const GetCliente = async (id) => {
+  const query =
+    gql`
+    query GetCliente {
+      cliente(where: { id: "` +
+    id +
+    `" }) {
+        id
+        foto {
+          url
+        }
+        url2
+        nombre
+        tieneValera
+        tipoCliente {
+          nombre
+        }
+        documento
+      }
+    }
+  `;
+  const result = await request(MASTER_URL, query);
+  return result;
+};
+
+const GetCombo = async (id) => {
+  const query =
+    gql`
+    query GetProducto {
+      producto(where: { id: "` +
+    id +
+    `" }) {
+        id
+        nombre
+        imagen {
+          url
+        }
+        url2
+        tipoProducto {
+          nombre
+          precio
+        }
+      }
+    }
+  `;
+  const result = await request(MASTER_URL, query);
+  return result;
+};
+
+const DeleteClient = async (id) => {
+
+  console.log(id);
+
+  const mutation = gql`
+    mutation DeleteCliente {
+      deleteCliente(where: { id: "`+id+`" }) {
+        id
+      }
+    }
+  `;
+
+  console.log(mutation);
+
+  try {
+    const result = await request(
+      MASTER_URL,
+      mutation,
+      {},
+      {
+        Authorization: `Bearer ${HYGRAPH_TOKEN}`,
+      }
+    );
+    return result;
+  } catch (error) {
+    console.error("Error deleting client:", error);
+    throw error;
+  }
+};
+
+const DeleteCombo = async (id) => {
+  console.log(id);
+
+  const mutation = gql`
+    mutation DeleteCombo {
+      deleteProducto(where: { id: "`+id+`" }) {
+        id
+      }
+    }
+  `;
+
+  console.log(mutation);
+
+  try {
+    const result = await request(
+      MASTER_URL,
+      mutation,
+      {},
+      {
+        Authorization: `Bearer ${HYGRAPH_TOKEN}`,
+      }
+    );
+    return result;
+  } catch (error) {
+    console.error("Error deleting combo:", error);
+    throw error;
+  }
 };
 
 export default {
@@ -245,4 +461,11 @@ export default {
   createPedido,
   GetPedidos,
   uploadAsset,
+  GetCliente,
+  GetTipoProductos,
+  createCombo,
+  GetCombo,
+  updateClient,
+  DeleteClient,
+  DeleteCombo,
 };

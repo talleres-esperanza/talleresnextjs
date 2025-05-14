@@ -5,9 +5,9 @@ import { useForm, Controller } from "react-hook-form";
 import { DatePicker } from "@/app/_components/generic/DatePicker";
 import { Button } from "@/components/ui/button";
 import GlobalApi from "@/app/_utils/GlobalApi";
-
 import {
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
   flexRender,
 } from "@tanstack/react-table";
@@ -21,7 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Image from "next/image";
-
 import { format } from "date-fns";
 
 const getColumns = () => [
@@ -29,7 +28,10 @@ const getColumns = () => [
     accessorKey: "aprendice.foto.url",
     header: "Foto del Aprendiz",
     cell: ({ row }) => {
-      const url = row.original.aprendice?.foto?.url || "/placeholder-user.png";
+      const url =
+        row.original.aprendice?.foto?.url ||
+        row.original.aprendice?.url2 ||
+        "/placeholder-user.png";
       return (
         <div className="w-12 h-12 rounded-full overflow-hidden">
           <Image
@@ -55,7 +57,9 @@ const getColumns = () => [
     header: "Imagen del Producto",
     cell: ({ row }) => {
       const url =
-        row.original.producto?.imagen?.url || "/placeholder-product.png";
+        row.original.producto?.imagen?.url ||
+        row.original.producto?.url2 ||
+        "/placeholder-product.png";
       return (
         <div className="w-12 h-12 rounded overflow-hidden">
           <Image
@@ -80,6 +84,10 @@ const getColumns = () => [
 
 const PedidosPage = () => {
   const [pedidos, setPedidosList] = useState([]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 5,
+  });
 
   useEffect(() => {
     getPedidosList();
@@ -112,6 +120,11 @@ const PedidosPage = () => {
     data: pedidos,
     columns: getColumns(),
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    state: {
+      pagination,
+    },
+    onPaginationChange: setPagination,
   });
 
   return (
@@ -180,6 +193,28 @@ const PedidosPage = () => {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Paginación */}
+        <div className="flex justify-between items-center mt-4">
+          <div>
+            Página {table.getState().pagination.pageIndex + 1} de{" "}
+            {table.getPageCount()}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Anterior
+            </Button>
+            <Button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Siguiente
+            </Button>
+          </div>
         </div>
       </div>
     </div>

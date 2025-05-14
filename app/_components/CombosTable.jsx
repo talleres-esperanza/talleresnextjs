@@ -32,6 +32,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import CreateComboDialog from "./create/CreateCombo"
+import GetClient from "./get/GetClient"
+import GetCombo from "./get/GetCombo"
+import DeleteCombo from "./delete/DeleteCombo"
+
+
 
 export const getColumns = () => [
   {
@@ -77,6 +82,9 @@ export const getColumns = () => [
     accessorKey: "imagen",
     header: "Imagen",
     cell: ({ row }) => {
+
+      
+
       const url = row.getValue("imagen")
       return (
         <img src={url} alt="Combo" className="w-12 h-12 object-cover rounded" />
@@ -98,12 +106,16 @@ export const getColumns = () => [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Ver Combo</DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <GetCombo id={row.original.id} />
+            </DropdownMenuItem>
             <DropdownMenuItem>Editar Combo</DropdownMenuItem>
-            <DropdownMenuItem>Eliminar Combo</DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <DeleteCombo id={row.original.id} />
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      )
+      );
     },
   },
 ]
@@ -123,7 +135,7 @@ const CombosTable = ({ combosList }) => {
         id: producto.id,
         nombre: producto.nombre || "Sin nombre",
         tipoProducto: producto.tipoProducto.nombre || "Sin tipo",
-        imagen: producto.imagen?.url || "/placeholder-image.png"
+        imagen: producto.imagen?.url || producto.url2 ||  "/placeholder-image.png"
       }));
       
       console.log("Datos procesados:", flattenedData);
@@ -133,6 +145,8 @@ const CombosTable = ({ combosList }) => {
       return [];
     }
   }, [combosList]);
+
+  
 
   const table = useReactTable({
     data,

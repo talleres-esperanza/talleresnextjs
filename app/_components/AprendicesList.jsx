@@ -33,6 +33,10 @@ import {
 } from "@/components/ui/table";
 import Image from "next/image";
 import CreateAprendizDialog from "./create/CreateAprendiz";
+import GetClient from "./get/GetClient";
+import EditClient from "./edit/EditClient";
+import ClientEditForm from "./forms/ClientEditForm";
+import DeleteClient from "./delete/DeleteClient";
 
 export const getColumns = () => [
   {
@@ -61,13 +65,17 @@ export const getColumns = () => [
     accessorKey: "foto",
     header: "Foto",
     cell: ({ row }) => {
-      const url = row.getValue("foto")?.url || "/placeholder-user.png";
+      const fotoUrl = row.getValue("foto")?.url;
+      const url2 = row.original.url2; // acceso directo al campo del objeto
+
+      const url = fotoUrl || url2 || "/placeholder-user.png";
+
       return (
         <div className="w-12 h-12 rounded-full overflow-hidden">
-          <Image 
-            src={url} 
-            width={48} 
-            height={48} 
+          <Image
+            src={url}
+            width={48}
+            height={48}
             alt="Foto aprendiz"
             className="object-cover"
           />
@@ -85,13 +93,18 @@ export const getColumns = () => [
         Nombre <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => <div className="capitalize">{row.getValue("nombre")}</div>,
+    cell: ({ row }) => (
+      <div className="capitalize">{row.getValue("nombre")}</div>
+    ),
   },
   {
     accessorKey: "tieneValera",
     header: "Valera",
-    cell: ({ row }) => <div className="capitalize">{row.getValue("tieneValera")}</div>,
+    cell: ({ row }) => (
+      <div className="capitalize">{row.getValue("tieneValera")}</div>
+    ),
   },
+
   {
     id: "actions",
     enableHiding: false,
@@ -107,9 +120,15 @@ export const getColumns = () => [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Ver Detalles</DropdownMenuItem>
-            <DropdownMenuItem>Editar Aprendiz</DropdownMenuItem>
-            <DropdownMenuItem>Eliminar Aprendiz</DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <GetClient id={row.original.id} />
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <EditClient id={row.original.id} />
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <DeleteClient id={row.original.id} />
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

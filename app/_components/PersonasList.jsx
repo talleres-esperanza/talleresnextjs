@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +7,6 @@ import GlobalApi from "../_utils/GlobalApi";
 import Image from "next/image";
 
 const PersonasList = ({ onPersonasSelect, selectedPersonas }) => {
-  // Datos de ejemplo - reemplaza con tu API
   const [personas, setPersonas] = React.useState([]);
 
   useEffect(() => {
@@ -15,7 +15,6 @@ const PersonasList = ({ onPersonasSelect, selectedPersonas }) => {
 
   const getAprendicesList = () => {
     GlobalApi.GetAprendices().then((resp) => {
-      console.log(resp);
       setPersonas(resp.clientes || []);
     });
   };
@@ -28,24 +27,53 @@ const PersonasList = ({ onPersonasSelect, selectedPersonas }) => {
     onPersonasSelect(updatedPersonas);
   };
 
+  const isSelected = (persona) =>
+    selectedPersonas.some((p) => p.id === persona.id);
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      {personas.map((persona) => (
-        <Card key={persona.id} className="p-4 flex items-center space-x-4">
-          <Checkbox
-            id={`persona-${persona.id}`}
-            checked={selectedPersonas.some((p) => p.id === persona.id)}
-            onCheckedChange={(checked) => handleSelectPersona(persona, checked)}
-          />
+      {personas.map((persona) => {
+        const selected = isSelected(persona);
 
-          <div className="flex flex-col items-center">
-            <Image className="rounded-xl" alt={persona.nombre} src={persona?.foto?.url || "/placeholder-user.png"} width={500} height={500} />
-            <label htmlFor={`persona-${persona.id}`} className="text-lg pt-4 font-bold">
-              {persona.nombre}
-            </label>
-          </div>
-        </Card>
-      ))}
+        return (
+          <Card
+            key={persona.id}
+            onClick={() => handleSelectPersona(persona, !selected)}
+            className={`p-4 cursor-pointer border-2 transition ${
+              selected ? "border-primary" : "border-muted"
+            }`}
+          >
+            <div className="flex flex-col items-center space-y-2">
+              {/* Prevent checkbox click from bubbling to card */}
+              <Checkbox
+                id={`persona-${persona.id}`}
+                checked={selected}
+                onCheckedChange={(checked) =>
+                  handleSelectPersona(persona, checked)
+                }
+                onClick={(e) => e.stopPropagation()}
+              />
+
+              <Image
+                className="rounded-xl mt-2"
+                alt={persona.nombre}
+                src={
+                  persona?.foto?.url || persona?.url2 || "/placeholder-user.png"
+                }
+                width={100}
+                height={100}
+              />
+
+              <label
+                htmlFor={`persona-${persona.id}`}
+                className="text-center text-lg font-bold pt-2"
+              >
+                {persona.nombre}
+              </label>
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 };

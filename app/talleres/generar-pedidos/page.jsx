@@ -35,24 +35,30 @@ const GenerarPedidosPage = () => {
   const handlePersonasSelect = (personas) => {
     setSelectedPersonas(personas);
   };
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     console.log("Pedido enviado:", {
       combo: selectedCombo,
       personas: selectedPersonas,
     });
 
-    selectedPersonas.map((persona) => {
+    for (const persona of selectedPersonas) {
       const pedido = {
         persona,
         combo: selectedCombo,
-        fecha: new Date().toISOString()
+        fecha: new Date().toISOString(),
       };
 
-      GlobalApi.createPedido(pedido);
-    });
+      try {
+        await GlobalApi.createPedido(pedido);
+        await delay(500); // Espera 500ms entre cada publicación
+      } catch (error) {
+        console.error("Error al crear pedido:", error);
+      }
+    }
 
-    // Resetear el formulario
+    // Reset
     setActiveStep(0);
     setSelectedCombo(null);
     setSelectedPersonas([]);

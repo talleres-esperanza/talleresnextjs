@@ -12,7 +12,7 @@ const ComboCard = ({ combo, isSelected, onClick }) => {
     >
       <div className="relative aspect-square">
         <Image 
-          src={combo.imagen.url} 
+          src={combo?.imagen?.url || combo.url2} 
           alt={combo.nombre}
           fill
           className="object-cover rounded-t-2xl"
