@@ -9,7 +9,7 @@ const GenerarPedidosPage = () => {
   const [productos, setProductos] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeStep, setActiveStep] = useState(0);
-  const [selectedCombo, setSelectedCombo] = useState(null);
+  const [selectedCombos, setSelectedCombos] = useState([]);
   const [selectedPersonas, setSelectedPersonas] = useState([]);
 
   useEffect(() => {
@@ -28,56 +28,69 @@ const GenerarPedidosPage = () => {
   }, []);
 
   const handleComboSelect = (combo) => {
-    setSelectedCombo(combo);
-    setActiveStep(1); // Avanzar al siguiente paso
+    const isAlreadySelected = selectedCombos.some((c) => c.id === combo.id);
+    const updatedCombos = isAlreadySelected
+      ? selectedCombos.filter((c) => c.id !== combo.id)
+      : [...selectedCombos, combo];
+
+    setSelectedCombos(updatedCombos);
   };
 
   const handlePersonasSelect = (personas) => {
     setSelectedPersonas(personas);
   };
+
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const handleSubmit = async () => {
     console.log("Pedido enviado:", {
-      combo: selectedCombo,
+      combos: selectedCombos,
       personas: selectedPersonas,
     });
 
     for (const persona of selectedPersonas) {
       const pedido = {
         persona,
-        combo: selectedCombo,
+        combos: selectedCombos, // ahora es un array
         fecha: new Date().toISOString(),
       };
 
       try {
         await GlobalApi.createPedido(pedido);
-        await delay(500); // Espera 500ms entre cada publicación
+        await delay(300); // Espera 300ms entre cada publicación
       } catch (error) {
         console.error("Error al crear pedido:", error);
       }
     }
 
-    // Reset
     setActiveStep(0);
-    setSelectedCombo(null);
+    setSelectedCombos([]);
     setSelectedPersonas([]);
   };
 
   const steps = [
     {
-      title: "Seleccionar Combo",
+      title: "Seleccionar Combos",
       content: (
         <div>
-          <h2 className="text-2xl mb-4 font-bold">Selecciona un combo</h2>
+          <h2 className="text-2xl mb-4 font-bold">
+            Selecciona uno o más combos
+          </h2>
           {loading ? (
             <p>Cargando productos...</p>
           ) : productos.productos?.length > 0 ? (
-            <CombosList
-              combosList={productos}
-              onComboSelect={handleComboSelect}
-              selectedCombo={selectedCombo}
-            />
+            <>
+              <CombosList
+                combosList={productos}
+                onComboSelect={handleComboSelect}
+                selectedCombos={selectedCombos}
+              />
+              {selectedCombos.length > 0 && (
+                <div className="flex justify-end mt-6">
+                  <Button onClick={() => setActiveStep(1)}>Continuar</Button>
+                </div>
+              )}
+            </>
           ) : (
             <p>No hay productos disponibles</p>
           )}

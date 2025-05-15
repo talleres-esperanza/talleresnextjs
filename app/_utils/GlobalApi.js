@@ -291,17 +291,24 @@ const createPedido = async (pedidoData) => {
   // 1. Crear el pedido
   const createQuery = gql`
     mutation {
-      createPedido(
-        data: {
-          aprendice: { connect: { id: "${pedidoData?.persona?.id}" } }
-          producto: { connect: { id: "${pedidoData?.combo?.id}" } }
-          fecha: "${pedidoData?.fecha}"
+    createPedido(
+      data: {
+        aprendice: { connect: { id: "${pedidoData?.persona?.id}" } }
+        producto: {
+          connect: [
+            ${pedidoData.combos
+              .map((combo) => `{ id: "${combo.id}" }`)
+              .join(",")}
+          ]
         }
-      ) {
-        id
+        fecha: "${pedidoData?.fecha}"
       }
+    ) {
+      id
     }
+  }
   `;
+  console.log(createQuery);
 
   const createResult = await request(MASTER_URL, createQuery);
   const pedidoId = createResult?.createPedido?.id;
