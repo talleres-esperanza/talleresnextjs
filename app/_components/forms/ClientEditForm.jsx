@@ -18,6 +18,7 @@ import { useForm, Controller } from "react-hook-form";
 const ClientEditForm = ({ initialData }) => {
   const [tipoClientes, setTipoClientes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [imagenPrevia, setImagenPrevia] = useState(null);
 
   const {
     register,
@@ -39,6 +40,7 @@ const ClientEditForm = ({ initialData }) => {
         tipoCliente: initialData.tipoCliente?.id?.toString() || "",
         valera: initialData.tieneValera ? "si" : "no",
       });
+      setImagenPrevia(initialData.url2);
       setIsLoading(false);
     }
   }, [initialData, tipoClientes, reset]);
@@ -51,7 +53,7 @@ const ClientEditForm = ({ initialData }) => {
 
   const updateClient = async (data) => {
     try {
-      let imageUrl = initialData.url2;
+      let imageUrl = imagenPrevia;
 
       if (data.foto?.[0]) {
         imageUrl = await uploadImageToCloudinary(
@@ -61,17 +63,22 @@ const ClientEditForm = ({ initialData }) => {
         );
       }
 
-      const result = await GlobalApi.updateClient(initialData.id, {
+      const clientData = {
+        id: initialData.id,
         nombre: data.nombre,
         documento: data.documento,
         tipoClienteId: data.tipoCliente,
-        valera: data.valera === "si",
-        url2: imageUrl,
-      });
+        tieneValera: data.valera === "si",
+        url2: imageUrl || "",
+      };
 
+      const result = await GlobalApi.updateClient(clientData);
       console.log("Cliente actualizado:", result);
+
+      // Aquí puedes agregar una notificación de éxito o redirección
     } catch (error) {
       console.error("Error al actualizar cliente:", error);
+      // Aquí puedes agregar una notificación de error
     }
   };
 
@@ -80,11 +87,11 @@ const ClientEditForm = ({ initialData }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit(updateClient)}>
-      <div className="grid grid-cols-2 gap-5">
+    <form onSubmit={handleSubmit(updateClient)} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Nombre */}
-        <div className="flex flex-col gap-2">
-          <Label>Nombre Completo</Label>
+        <div className="space-y-2">
+          <Label>Nombre Completo *</Label>
           <Input
             type="text"
             placeholder="Ej. Fulanito Perez"
@@ -92,14 +99,14 @@ const ClientEditForm = ({ initialData }) => {
               required: "El nombre del cliente es obligatorio",
             })}
           />
-          <p className="text-red-600 text-sm">
-            {errors.nombre?.message?.toString()}
-          </p>
+          {errors.nombre && (
+            <p className="text-sm text-red-500">{errors.nombre.message}</p>
+          )}
         </div>
 
         {/* Documento */}
-        <div className="flex flex-col gap-2">
-          <Label>Documento</Label>
+        <div className="space-y-2">
+          <Label>Documento *</Label>
           <Input
             type="text"
             placeholder="Ej. 10009238173"
@@ -107,20 +114,35 @@ const ClientEditForm = ({ initialData }) => {
               required: "El documento del cliente es obligatorio",
             })}
           />
-          <p className="text-red-600 text-sm">
-            {errors.documento?.message?.toString()}
-          </p>
+          {errors.documento && (
+            <p className="text-sm text-red-500">{errors.documento.message}</p>
+          )}
         </div>
 
         {/* Foto */}
-        <div className="flex flex-col gap-2">
-          <Label>Foto (opcional)</Label>
+        <div className="space-y-2">
+          <Label>Foto</Label>
+          {imagenPrevia && (
+            <div className="mb-2 flex flex-col items-start">
+              <img
+                src={imagenPrevia}
+                alt="Foto actual del cliente"
+                className="h-24 w-24 object-cover rounded-md border"
+              />
+              <span className="text-xs text-gray-500 mt-1">Foto actual</span>
+            </div>
+          )}
           <Input type="file" accept="image/*" {...register("foto")} />
+          <p className="text-xs text-gray-500">
+            {imagenPrevia
+              ? "Deja vacío para mantener la foto actual"
+              : "Selecciona una foto para el cliente"}
+          </p>
         </div>
 
         {/* Tipo de Cliente */}
-        <div className="flex flex-col gap-2">
-          <Label>Tipo de Cliente</Label>
+        <div className="space-y-2">
+          <Label>Tipo de Cliente *</Label>
           <Controller
             name="tipoCliente"
             control={control}
@@ -144,14 +166,14 @@ const ClientEditForm = ({ initialData }) => {
               </Select>
             )}
           />
-          <p className="text-red-600 text-sm">
-            {errors.tipoCliente?.message?.toString()}
-          </p>
+          {errors.tipoCliente && (
+            <p className="text-sm text-red-500">{errors.tipoCliente.message}</p>
+          )}
         </div>
 
         {/* Valera */}
-        <div className="flex flex-col gap-2">
-          <Label>Valera</Label>
+        <div className="space-y-2">
+          <Label>Valera *</Label>
           <Controller
             name="valera"
             control={control}
@@ -172,13 +194,13 @@ const ClientEditForm = ({ initialData }) => {
               </Select>
             )}
           />
-          <p className="text-red-600 text-sm">
-            {errors.valera?.message?.toString()}
-          </p>
+          {errors.valera && (
+            <p className="text-sm text-red-500">{errors.valera.message}</p>
+          )}
         </div>
       </div>
 
-      <Button className="mt-4" type="submit">
+      <Button type="submit" className="mt-4">
         Actualizar Cliente
       </Button>
     </form>

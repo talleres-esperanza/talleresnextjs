@@ -35,6 +35,7 @@ import CreateComboDialog from "./create/CreateCombo"
 import GetClient from "./get/GetClient"
 import GetCombo from "./get/GetCombo"
 import DeleteCombo from "./delete/DeleteCombo"
+import EditCombo from "./edit/EditCombo"
 
 
 
@@ -109,7 +110,9 @@ export const getColumns = () => [
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
               <GetCombo id={row.original.id} />
             </DropdownMenuItem>
-            <DropdownMenuItem>Editar Combo</DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <EditCombo id={row.original.id} />
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
               <DeleteCombo id={row.original.id} />
             </DropdownMenuItem>

@@ -1,4 +1,4 @@
-import { Apple, Briefcase, Calendar, Component, DollarSign, LayoutDashboard, Plus, PlusIcon } from "lucide-react";
+import { Apple, Briefcase, Calendar, Component, DollarSign, DollarSignIcon, icons, LayoutDashboard, Plus, PlusIcon } from "lucide-react";
 
 export const SidebarLinks = [
     {
@@ -27,6 +27,12 @@ export const SidebarLinks = [
         name: "Combos",
         link: "/talleres/combos",
         icon: <Component className="w-5 h-5" />
+    },
+    {
+        id: 5,
+        name: "Precios",
+        link: "/talleres/precios",
+        icon: <DollarSignIcon className="w-5 h-5" />
     }
 ]
 

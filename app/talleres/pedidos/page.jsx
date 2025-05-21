@@ -1,106 +1,31 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { DatePicker } from "@/app/_components/generic/DatePicker";
 import { Button } from "@/components/ui/button";
-import GlobalApi from "@/app/_utils/GlobalApi";
-import {
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-  flexRender,
-} from "@tanstack/react-table";
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import Image from "next/image";
 import { format } from "date-fns";
+import GlobalApi from "@/app/_utils/GlobalApi";
 
-const getColumns = () => [
-  {
-    accessorKey: "aprendice.foto.url",
-    header: "Foto del Aprendiz",
-    cell: ({ row }) => {
-      const url =
-        row.original.aprendice?.foto?.url ||
-        row.original.aprendice?.url2 ||
-        "/placeholder-user.png";
-      return (
-        <div className="w-12 h-12 rounded-full overflow-hidden">
-          <Image
-            src={url}
-            width={48}
-            height={48}
-            alt="Foto"
-            className="object-cover"
-          />
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "aprendice.nombre",
-    header: "Nombre del Aprendiz",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.original.aprendice?.nombre}</div>
-    ),
-  },
-  {
-    accessorKey: "producto.imagen.url",
-    header: "Imagen del Producto",
-    cell: ({ row }) => {
-      const url =
-        row.original.producto?.imagen?.url ||
-        row.original.producto?.url2 ||
-        "/placeholder-product.png";
-      return (
-        <div className="w-12 h-12 rounded overflow-hidden">
-          <Image
-            src={url}
-            width={48}
-            height={48}
-            alt="Producto"
-            className="object-cover"
-          />
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "producto.nombre",
-    header: "Nombre del Producto",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.original.producto?.nombre}</div>
-    ),
-  },
-];
+// Agrupar por aprendiz.id
+const groupByAprendice = (array) => {
+  return array.reduce((acc, item) => {
+    const id = item.aprendice?.id;
+    if (!acc[id]) {
+      acc[id] = {
+        aprendiz: item.aprendice,
+        productos: [],
+      };
+    }
+    acc[id].productos.push(item.producto);
+    return acc;
+  }, {});
+};
 
 const PedidosPage = () => {
-  const [pedidos, setPedidosList] = useState([]);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 5,
-  });
-
-  useEffect(() => {
-    getPedidosList();
-  }, []);
-
-  const getPedidosList = () => {
-    const today = format(new Date(), "yyyy-MM-dd");
-
-    GlobalApi.GetPedidos(today).then((resp) => {
-      console.log(resp);
-      setPedidosList(resp.pedidos);
-    });
-  };
+  const [pedidosAgrupados, setPedidosAgrupados] = useState([]);
+  const [cantidades, setCantidades] = useState({});
 
   const {
     handleSubmit,
@@ -112,111 +37,191 @@ const PedidosPage = () => {
     },
   });
 
-  const onSubmit = (data) => {
-    console.log("Fecha seleccionada:", data.fecha);
+  const getPedidosList = () => {
+    const today = format(new Date(), "yyyy-MM-dd");
+
+    GlobalApi.GetPedidos(today).then((resp) => {
+      const pedidosConIds = resp.pedidos.flatMap((pedido) =>
+        pedido.producto.map((producto, index) => {
+          const key = `${pedido.aprendice.id}-${producto.id}-${index}`;
+          return {
+            key,
+            aprendice: pedido.aprendice,
+            producto,
+          };
+        })
+      );
+
+      const agrupados = groupByAprendice(pedidosConIds);
+      setPedidosAgrupados(Object.values(agrupados));
+
+      const initialQuantities = {};
+      pedidosConIds.forEach((item) => {
+        initialQuantities[item.key] = 0;
+      });
+      setCantidades(initialQuantities);
+    });
   };
 
-  const table = useReactTable({
-    data: pedidos,
-    columns: getColumns(),
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    state: {
-      pagination,
-    },
-    onPaginationChange: setPagination,
-  });
+  useEffect(() => {
+    getPedidosList();
+  }, []);
 
+  const modificarCantidad = (key, delta) => {
+    setCantidades((prev) => {
+      const nuevaCantidad = (prev[key] ?? 0) + delta;
+      return {
+        ...prev,
+        [key]: Math.max(0, nuevaCantidad), // no permite menos de 0
+      };
+    });
+  };
+
+  const onSubmit = (data) => {
+    const fecha = format(data.fecha, "yyyy-MM-dd");
+
+    const pedidosMap = {};
+
+    Object.entries(cantidades).forEach(([key, cantidad]) => {
+      if (cantidad > 0) {
+        const [aprendizId, productoId, index] = key.split("-");
+
+        // Encuentra aprendiz y producto según agrupación original
+        const aprendizObj = pedidosAgrupados.find(
+          (a) => a.aprendiz.id === aprendizId
+        );
+        const producto = aprendizObj?.productos.find(
+          (p) => p.id === productoId
+        );
+
+        if (aprendizObj && producto) {
+          if (!pedidosMap[aprendizId]) {
+            pedidosMap[aprendizId] = {
+              aprendiz: aprendizObj.aprendiz,
+              productos: [],
+            };
+          }
+
+          pedidosMap[aprendizId].productos.push({
+            ...producto,
+            cantidad,
+          });
+        }
+      }
+    });
+
+    const resultadoFinal = {
+      fecha,
+      pedidos: Object.values(pedidosMap),
+    };
+
+    console.log(
+      "📦 Pedidos agrupados por aprendiz con productos y cantidades:"
+    );
+    console.log(JSON.stringify(resultadoFinal, null, 2));
+  };
   return (
     <div>
       <h1 className="text-3xl mb-5 font-bold">Pedidos</h1>
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="flex items-center gap-5"
-      >
-        <Controller
-          name="fecha"
-          control={control}
-          rules={{ required: "La fecha es obligatoria" }}
-          render={({ field }) => (
-            <DatePicker date={field.value} onChange={field.onChange} />
+
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="flex items-center gap-5">
+          <Controller
+            name="fecha"
+            control={control}
+            rules={{ required: "La fecha es obligatoria" }}
+            render={({ field }) => (
+              <DatePicker date={field.value} onChange={field.onChange} />
+            )}
+          />
+          {errors.fecha && (
+            <p className="text-red-500 text-sm">{errors.fecha.message}</p>
           )}
-        />
-        {errors.fecha && (
-          <p className="text-red-500 text-sm">{errors.fecha.message}</p>
-        )}
 
-        <Button type="submit">Enviar</Button>
+          <Button type="submit">Guardar Pedidos</Button>
+        </div>
+
+        <div className="mt-6 border rounded-md overflow-x-auto">
+          {/* Encabezado estilo tabla */}
+          <div className="grid grid-cols-[200px_1fr] bg-gray-100 border-b p-4 font-semibold">
+            <div>Aprendiz</div>
+            <div>Productos</div>
+          </div>
+
+          {/* Contenido por aprendiz */}
+          {pedidosAgrupados.map(({ aprendiz, productos }) => (
+            <div
+              key={aprendiz.id}
+              className="grid grid-cols-[200px_1fr] border-b p-4 items-center"
+            >
+              {/* Info del Aprendiz */}
+              <div className="flex flex-col items-center">
+                <Image
+                  src={
+                    aprendiz?.foto?.url ||
+                    aprendiz?.url2 ||
+                    "/placeholder-user.png"
+                  }
+                  alt="Aprendiz"
+                  width={120}
+                  height={120}
+                  className="object-cover w-[120px] h-[120px] rounded-full"
+                />
+                <p className="text-sm text-center mt-1 capitalize">
+                  {aprendiz?.nombre}
+                </p>
+              </div>
+
+              {/* Lista de productos */}
+              <div className="flex flex-wrap gap-4">
+                {productos.map((producto, index) => {
+                  const key = `${aprendiz.id}-${producto.id}-${index}`;
+                  return (
+                    <div
+                      key={key}
+                      className="flex flex-col items-center border rounded-md p-2 w-32"
+                    >
+                      <Image
+                        src={
+                          producto?.imagen?.url ||
+                          producto?.url2 ||
+                          "/placeholder-product.png"
+                        }
+                        alt="Producto"
+                        width={120}
+                        height={120}
+                        className="rounded object-cover w-[120px] h-[120px]"
+                      />
+                      <p className="text-sm text-center mt-2 capitalize">
+                        {producto?.nombre}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => modificarCantidad(key, -1)}
+                        >
+                          -
+                        </Button>
+                        <span className="min-w-[24px] text-center">
+                          {cantidades[key]}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => modificarCantidad(key, 1)}
+                        >
+                          +
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </form>
-
-      <div className="w-full mt-4">
-        <h2 className="text-xl font-semibold mb-4">Lista de Pedidos</h2>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={getColumns().length}
-                    className="text-center h-24"
-                  >
-                    No hay pedidos registrados.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Paginación */}
-        <div className="flex justify-between items-center mt-4">
-          <div>
-            Página {table.getState().pagination.pageIndex + 1} de{" "}
-            {table.getPageCount()}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Anterior
-            </Button>
-            <Button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Siguiente
-            </Button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

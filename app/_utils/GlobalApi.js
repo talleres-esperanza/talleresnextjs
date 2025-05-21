@@ -207,6 +207,94 @@ const createCombo = async (comboData) => {
   return createProducto.id;
 };
 
+const createTipoProducto = async (tipoProducto) => {
+  const mutation =
+    gql`
+    mutation CreateTipoProducto {
+      createTipoProducto(data: { nombre: "` +
+    tipoProducto.nombre +
+    `", precio: ` +
+    tipoProducto.precio +
+    ` }) {
+        id
+      }
+    }
+  `;
+
+  // Crear el combo
+  const { createTipoProducto } = await request(MASTER_URL, mutation);
+
+  const publishMutation =
+    gql`
+  mutation PublishTipoProducto {
+    publishTipoProducto(where: {id:"` +
+    createTipoProducto.id +
+    `"}) {
+      id
+    }
+  }
+`;
+  // Publicar el combo
+  await request(MASTER_URL, publishMutation);
+
+  return createTipoProducto.id;
+};
+
+const updatePedido = async () => {
+  const query = gql`
+    mutation UpdatePedido {
+      updatePedido(
+        data: {
+          productoCantidad: {
+            create: { producto: { connect: { id: "" } }, cantidad: 10 }
+          }
+        }
+        where: { id: "" }
+      )
+    }
+  `;
+};
+
+const updateCombo = async (data) => {
+  const mutation =
+    gql`
+    mutation UpdateCombo {
+      updateProducto(
+        data: { nombre: "` +
+    data.nombre +
+    `", tipoProducto: { connect: { id: "` +
+    data.idTipoProducto +
+    `" } }, url2: "` +
+    data.url2 +
+    `" }
+        where: { id: "` +
+    data.id +
+    `" }
+      ){
+    id
+  }
+    }
+  `;
+
+  // Crear el combo
+  const { updateProducto } = await request(MASTER_URL, mutation);
+
+  const publishMutation =
+    gql`
+mutation PublishTipoProducto {
+  publishProducto(where: {id:"` +
+    updateProducto.id +
+    `"}) {
+    id
+  }
+}
+`;
+  // Publicar el combo
+  await request(MASTER_URL, publishMutation);
+
+  return updateProducto;
+};
+
 const GetPedidos = async (fecha) => {
   const query =
     gql`
@@ -240,52 +328,52 @@ const GetPedidos = async (fecha) => {
   return result;
 };
 
-const updateClient = async (id, data) => {
-  const mutation = gql`
-    mutation UpdateCliente(
-      $id: ID!
-      $nombre: String!
-      $documento: String!
-      $valera: TieneValera!
-      $tipoClienteId: ID!
-      $url2: String!
-    ) {
+const updateClient = async (data) => {
+  const mutation =
+    gql`
+    mutation UpdateClient {
       updateCliente(
-        where: { id: $id }
         data: {
-          nombre: $nombre
-          documento: $documento
-          tieneValera: $valera
-          tipoCliente: { connect: { id: $tipoClienteId } }
-          url2: $url2
+          documento: "` +
+    data.documento +
+    `"
+          nombre: "` +
+    data.nombre +
+    `"
+          tipoCliente: { connect: { id: "` +
+    data.tipoClienteId +
+    `" } }
+          url2: "` +
+    data.url2 +
+    `"
         }
+        where: { id: "` +
+    data.id +
+    `" }
       ) {
         id
       }
     }
   `;
 
-  const publish = gql`
-    mutation PublishCliente($id: ID!) {
-      publishCliente(where: { id: $id }) {
-        id
-      }
-    }
-  `;
+  // Crear el combo
+  const { updateCliente } = await request(MASTER_URL, mutation);
 
-  const variables = {
-    id,
-    nombre: data.nombre,
-    documento: data.documento,
-    valera: data.valera,
-    tipoClienteId: data.tipoClienteId,
-    url2: data.url2,
-  };
+  const publishMutation =
+    gql`
+mutation PublishTipoProducto {
+publishCliente(where: {id:"` +
+    updateCliente.id +
+    `"}) {
+  id
+}
+}
+`;
+  // Publicar el combo
+  await request(MASTER_URL, publishMutation);
 
-  await request(MASTER_URL, mutation, variables);
-  await request(MASTER_URL, publish, { id });
+  return updateCliente;
 };
-
 
 const createPedido = async (pedidoData) => {
   // 1. Crear el pedido
@@ -402,12 +490,14 @@ const GetCombo = async (id) => {
 };
 
 const DeleteClient = async (id) => {
-
   console.log(id);
 
-  const mutation = gql`
+  const mutation =
+    gql`
     mutation DeleteCliente {
-      deleteCliente(where: { id: "`+id+`" }) {
+      deleteCliente(where: { id: "` +
+    id +
+    `" }) {
         id
       }
     }
@@ -434,9 +524,12 @@ const DeleteClient = async (id) => {
 const DeleteCombo = async (id) => {
   console.log(id);
 
-  const mutation = gql`
+  const mutation =
+    gql`
     mutation DeleteCombo {
-      deleteProducto(where: { id: "`+id+`" }) {
+      deleteProducto(where: { id: "` +
+    id +
+    `" }) {
         id
       }
     }
@@ -475,4 +568,6 @@ export default {
   updateClient,
   DeleteClient,
   DeleteCombo,
+  createTipoProducto,
+  updateCombo,
 };
