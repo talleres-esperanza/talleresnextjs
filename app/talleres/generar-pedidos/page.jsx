@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import GlobalApi from "@/app/_utils/GlobalApi";
 import CombosList from "@/app/_components/CombosList";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+
 import PersonasList from "@/app/_components/PersonasList";
 
 const GenerarPedidosPage = () => {
@@ -52,7 +54,7 @@ const GenerarPedidosPage = () => {
       const pedido = {
         persona,
         combos: selectedCombos, // ahora es un array
-        fecha: new Date().toISOString(),
+        fecha: format(new Date(), "yyyy-MM-dd")
       };
 
       try {

@@ -240,21 +240,6 @@ const createTipoProducto = async (tipoProducto) => {
   return createTipoProducto.id;
 };
 
-const updatePedido = async () => {
-  const query = gql`
-    mutation UpdatePedido {
-      updatePedido(
-        data: {
-          productoCantidad: {
-            create: { producto: { connect: { id: "" } }, cantidad: 10 }
-          }
-        }
-        where: { id: "" }
-      )
-    }
-  `;
-};
-
 const updateCombo = async (data) => {
   const mutation =
     gql`
@@ -324,7 +309,10 @@ const GetPedidos = async (fecha) => {
       }
     }
   `;
+
+  
   const result = await request(MASTER_URL, query);
+  console.log(result);
   return result;
 };
 
@@ -374,6 +362,105 @@ publishCliente(where: {id:"` +
 
   return updateCliente;
 };
+
+const updatePedido = async (data) => {
+  const mutation =
+    gql`
+    mutation UpdatePedido {
+      updatePedido(
+        data: {
+          productoCantidad: {
+            create: { producto: { connect: { id: "` +
+    data.producto.id +
+    `" } }, cantidad: ` +
+    data.producto.cantidad +
+    ` }
+          }
+        }
+        where: { id: "` +
+    data.id +
+    `" }
+      ) {
+        id
+        productoCantidad{
+          id
+        }
+      }
+    }
+  `;
+
+  // Crear el combo
+  const { updatePedido } = await request(MASTER_URL, mutation);
+  console.log(updatePedido);
+
+  const publishMutation =
+    gql`
+mutation PublishPorductoCantidad {
+publishProductoCantidad(where: {id:"` +
+    updatePedido.productoCantidad[updatePedido.productoCantidad.length - 1].id +
+    `"}) {
+  id
+}
+}
+`;
+  // Publicar el combo
+  await request(MASTER_URL, publishMutation);
+
+  //Publicar Pedido
+  const publishMutationPedido =
+    gql`
+mutation PublishPorductoCantidad {
+publishPedido(where: {id:"` +
+    updatePedido.id +
+    `"}) {
+  id
+}
+}
+`;
+  // Publicar el combo
+  await request(MASTER_URL, publishMutationPedido);
+
+  const pagoData = {
+    pedidoId: updatePedido.id,
+    tipoPagoId: data.tipoPagoId
+  };
+
+  console.log(pagoData)
+
+  await createPagoPedido(pagoData);
+
+  return updatePedido;
+};
+
+const createPagoPedido = async ({ pedidoId, tipoPagoId }) => {
+  const mutation = gql`
+    mutation CreatePagoPedido($pedidoId: ID!, $tipoPagoId: ID!) {
+      createPago(
+        data: {
+          pedido: { connect: { id: $pedidoId } }
+          tipoPago: { connect: { id: $tipoPagoId } }
+        }
+      ) {
+        id
+      }
+    }
+  `;
+
+  const { createPago } = await request(MASTER_URL, mutation, {
+    pedidoId,
+    tipoPagoId,
+  });
+
+  const publishMutation = gql`
+    mutation PublishPagoPedido($id: ID!) {
+      publishPago(where: { id: $id }) {
+        id
+      }
+    }
+  `;
+  await request(MASTER_URL, publishMutation, { id: createPago.id });
+};
+
 
 const createPedido = async (pedidoData) => {
   // 1. Crear el pedido
@@ -439,6 +526,21 @@ const getProductos = async () => {
   const result = await request(MASTER_URL, query);
   return result;
 };
+
+const getTipoPagos = async () => {
+  const query = gql`
+    query GetTipoPagos {
+      tipoPagos {
+        id
+        tipoPago
+      }
+    }
+  `;
+  const result = await request(MASTER_URL, query);
+  return result;
+};
+
+
 
 const GetCliente = async (id) => {
   const query =
@@ -570,4 +672,6 @@ export default {
   DeleteCombo,
   createTipoProducto,
   updateCombo,
+  updatePedido,
+  getTipoPagos,
 };
