@@ -310,7 +310,6 @@ const GetPedidos = async (fecha) => {
     }
   `;
 
-  
   const result = await request(MASTER_URL, query);
   console.log(result);
   return result;
@@ -422,10 +421,10 @@ publishPedido(where: {id:"` +
 
   const pagoData = {
     pedidoId: updatePedido.id,
-    tipoPagoId: data.tipoPagoId
+    tipoPagoId: data.tipoPagoId,
   };
 
-  console.log(pagoData)
+  console.log(pagoData);
 
   await createPagoPedido(pagoData);
 
@@ -460,7 +459,6 @@ const createPagoPedido = async ({ pedidoId, tipoPagoId }) => {
   `;
   await request(MASTER_URL, publishMutation, { id: createPago.id });
 };
-
 
 const createPedido = async (pedidoData) => {
   // 1. Crear el pedido
@@ -540,8 +538,6 @@ const getTipoPagos = async () => {
   return result;
 };
 
-
-
 const GetCliente = async (id) => {
   const query =
     gql`
@@ -560,6 +556,7 @@ const GetCliente = async (id) => {
           nombre
         }
         documento
+        cantidadValera
       }
     }
   `;
@@ -590,6 +587,42 @@ const GetCombo = async (id) => {
   const result = await request(MASTER_URL, query);
   return result;
 };
+
+const GetPagos = async() => {
+  const query = gql`
+    query GetPagos {
+      pagos {
+        pedido {
+          aprendice {
+            nombre
+            id
+            foto {
+              url
+            }
+            url2
+          }
+          productoCantidad {
+            producto {
+              nombre
+              imagen {
+                url
+              }
+              id
+            }
+            cantidad
+          }
+        }
+        id
+        tipoPago {
+          id
+          tipoPago
+        }
+      }
+    }
+  `;
+  const result = await request(MASTER_URL, query);
+  return result;
+}
 
 const DeleteClient = async (id) => {
   console.log(id);
@@ -674,4 +707,5 @@ export default {
   updateCombo,
   updatePedido,
   getTipoPagos,
+  GetPagos,
 };

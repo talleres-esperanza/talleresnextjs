@@ -72,6 +72,12 @@ const GetClient = ({ id }) => {
               <span className="font-bold">Tiene Valera:</span>{" "}
               {cliente?.cliente?.tieneValera}{" "}
             </p>
+            {cliente?.cliente?.tieneValera == "si" && (
+              <p className="text-md">
+                <span className="font-bold">Cantidad Valera</span>{" "}
+                {cliente?.cliente?.cantidadValera}/20
+              </p>
+            )}
             <p className="text-md">
               <span className="font-bold">Tipo Cliente:</span>{" "}
               {cliente?.cliente?.tipoCliente?.nombre}{" "}
