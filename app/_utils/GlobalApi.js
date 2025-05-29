@@ -78,7 +78,7 @@ const uploadAsset = async (file) => {
 const GetAprendices = async () => {
   const query = gql`
     query Clientes {
-      clientes {
+      clientes(first: 1000) {
         id
         nombre
         foto {
